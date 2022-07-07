@@ -1,42 +1,26 @@
-#include "raylib.h"
+#ifndef CHARACTER_H
+#define CHARACTER_H
 
-class Character
+#include "raylib.h"
+#include "raymath.h"
+#include "BaseCharacter.h"
+
+class Character:public BaseCharacter
 {
 public:
-    Character(float faceDir, float speed, int maxFrames,float winBoundaryX, float winBoundaryY ,float updateTime = 1.f/12.f, float runningTime = 0.f, int frame = 0);
-    Vector2 GetWorldPos() { return worldPos; }
-    void SetTexturePath(char *path)
-    {
-        texture = LoadTexture(path);
+    Character(Vector2 worldPos, Texture2D idle, Texture2D run, float boundaryX, float boundaryY);
+    virtual void Tick(float deltaTime) override;
+    virtual Vector2 GetScreenPos() override;
+    Rectangle getWeaponCollisionRec(){
+        return weaponCollisionRec;
     }
-    void SetIdlePath(char *path)
-    {
-        idle = LoadTexture(path);
-    }
-    void SetRunPath(char *path)
-    {
-        run = LoadTexture(path);
-    }
-    void SetScreenPos(int winWidth, int winHieght);
-    void SetWorldPos(float width, float height);
-    void Tick(float deltaTime);
-    void Movement();
-    void Animation(float deltaTime);
-    void Drawing();
-    void UnloadTextures();
+    float getHealth() const {return health;}
+    void takeDamage(float damage);
 private:
-    Texture2D texture;
-    Texture2D idle;
-    Texture2D run;
-    Vector2 screenPos;
-    Vector2 worldPos;
-    Vector2 velocity;
-    float faceDir = -1.0f;
-    int frame = 0;
-    float updateTime = 1.f / 12.f;
-    float runningTime = 0;
-    float speed = 5.0;
-    int maxFrames;
-    float winBoundaryX;
-    float winBoundaryY;
+    Texture2D weapon{LoadTexture("characters/weapon_sword.png")};
+    Rectangle weaponCollisionRec{};
+    float rotation = 35.f;
+    float health{100.f};
 };
+
+#endif

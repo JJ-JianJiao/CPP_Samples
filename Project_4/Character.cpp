@@ -1,76 +1,30 @@
 #include "Character.h"
 #include "raymath.h"
 
-Character::Character(float faceDir, float speed, int maxFrames, float winBoundaryX, float winBoundaryY, float updateTime, float runningTime, int frame)
+Character::Character(Vector2 worldPos, Texture2D idle, Texture2D run, float boundaryX, float boundaryY)
 {
-    this->faceDir = faceDir;
-    this->speed = speed;
-    this->maxFrames = maxFrames;
-    this->updateTime = updateTime;
-    this->runningTime = runningTime;
-    this->frame = frame;
-    this->winBoundaryX = winBoundaryX;
-    this->winBoundaryY = winBoundaryY;
-}
-
-void Character::UnloadTextures()
-{
-    UnloadTexture(texture);
-    UnloadTexture(idle);
-    UnloadTexture(run);
-}
-
-void Character::SetScreenPos(int winWidth, int winHeight)
-{
-    screenPos = {
-        winWidth / 2.0f - 4.0f * (0.5f * (float)texture.width / 6.0f),
-        winHeight / 2.0f - 4.0f * (0.5f * (float)texture.height)};
-}
-
-void Character::SetWorldPos(float width, float height)
-{
-    worldPos = {
-        width, height};
+    worldPos = worldPos;
+    this->winBoundaryX = boundaryX;
+    this->winBoundaryY = boundaryY;
+    texture = idle;
+    this->idle = idle;
+    this->run = run;
+    scale = 4;
+    updateTime = 1.f / 12.f;
+    runningTime = 0;
+    frame = 0;
+    maxFrames = 6;
+    speed = 5.f;
+    faceDir = 1.0f;
+    width = texture.width / maxFrames;
+    height = texture.height;
 }
 
 void Character::Tick(float deltaTime)
 {
-    Movement();
-    Animation(deltaTime);
-    Drawing();
-}
-
-void Character::Drawing()
-{
-    Rectangle knightSource{
-        frame * (float)(texture.width) / 6.0f,
-        0,
-        faceDir * (float)(texture.width) / 6.0f,
-        (float)texture.height};
-    Rectangle knightDest{
-        screenPos.x,
-        screenPos.y,
-        4.0f * (float)(texture.width) / 6.0f,
-        4.0f * (float)texture.height};
-    DrawTexturePro(texture, knightSource, knightDest, Vector2{}, 0, WHITE);
-}
-
-void Character::Animation(float deltaTime)
-{
-    runningTime += deltaTime;
-    if (runningTime > updateTime)
-    {
-        frame++;
-        runningTime = 0;
-        if (frame > maxFrames)
-        {
-            frame = 0;
-        }
-    }
-}
-
-void Character::Movement()
-{
+    if (!getAlive())
+        return;
+    BaseCharacter::Tick(deltaTime);
     velocity = {};
     if (IsKeyDown(KEY_A))
         velocity.x = 1.0;
@@ -80,22 +34,53 @@ void Character::Movement()
         velocity.y += 1.0;
     if (IsKeyDown(KEY_S))
         velocity.y -= 1.0;
-    if (Vector2LengthSqr(velocity) != 0.0)
+    Movement();
+
+    // draw sword
+    Vector2 origin = {};
+    Vector2 offset{};
+    if (faceDir > 0.f)
     {
-        // worldPos = worldPos + direction
-
-        worldPos = Vector2Add(worldPos, Vector2Scale(Vector2Normalize(velocity), speed));
-        if(worldPos.x > 0) worldPos.x = 0;
-        if(worldPos.y > 0) worldPos.y = 0;
-        if(worldPos.x < -winBoundaryX) worldPos.x = -winBoundaryX ;
-        if(worldPos.y < -winBoundaryY) worldPos.y = -winBoundaryY ;
-
-        // if((worldPos.x < 0 || worldPos.y < 0) || (worldPos.x > winBoundaryX || worldPos.y > winBoundaryY))
-        velocity.x < 0.f ? faceDir = 1.f : faceDir = -1.f;
-        texture = run;
+        origin = {0.f, weapon.height * scale};
+        offset = {35.f, 55.f};
+        weaponCollisionRec = {
+            GetScreenPos().x + offset.x,
+            GetScreenPos().y + offset.y - weapon.height * scale,
+            weapon.width * scale,
+            weapon.height * scale};
+        IsMouseButtonDown(MOUSE_LEFT_BUTTON) ? rotation = 35.f : rotation = 0.f;
     }
     else
     {
-        texture = idle;
+        origin = {weapon.width * scale, weapon.height * scale};
+        offset = {25.f, 55.f};
+        weaponCollisionRec = {
+            GetScreenPos().x + offset.x - weapon.width * scale,
+            GetScreenPos().y + offset.y - weapon.height * scale,
+            weapon.width * scale,
+            weapon.height * scale};
+        IsMouseButtonDown(MOUSE_LEFT_BUTTON) ? rotation = -35.f : rotation = 0.f;
+    }
+
+    Rectangle source{0.f, 0.f, static_cast<float>(weapon.width) * faceDir, static_cast<float>(weapon.height)};
+    Rectangle dest{GetScreenPos().x + offset.x, GetScreenPos().y + offset.y, weapon.width * scale, weapon.height * scale};
+
+    DrawTexturePro(weapon, source, dest, origin, rotation, WHITE);
+    weaponCollisionRec = {GetScreenPos().x + weapon.width * scale / 2 * faceDir, GetScreenPos().y, weapon.width * scale, weapon.height * scale};
+    DrawRectangleLines(weaponCollisionRec.x, weaponCollisionRec.y, weaponCollisionRec.width, weaponCollisionRec.height, RED);
+}
+
+Vector2 Character::GetScreenPos()
+{
+    return Vector2{screenPos};
+}
+
+void Character::takeDamage(float damage)
+{
+    health -= damage;
+    if (health <= 0)
+    {
+        health = 0;
+        setAlive(false);
     }
 }
